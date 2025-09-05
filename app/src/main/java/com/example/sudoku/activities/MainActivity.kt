@@ -19,7 +19,7 @@ class MainActivity : AppCompatActivity() {
             showDifficultyDialog()
         }
         findViewById<Button>(R.id.btnLeaderboard).setOnClickListener {
-            startActivity(Intent(this, LeaderboardActivity::class.java))
+            startActivity(Intent(this, LeaderboardSelectionActivity::class.java))
         }
     }
 

@@ -30,6 +30,11 @@
             android:name=".activities.LeaderboardActivity"
             android:label="排行榜"
             android:parentActivityName=".activities.MainActivity" />
+
+        <activity
+            android:name=".activities.LeaderboardSelectionActivity"
+            android:label="选择榜单"
+            android:parentActivityName=".activities.MainActivity" />
     </application>
 
 </manifest>

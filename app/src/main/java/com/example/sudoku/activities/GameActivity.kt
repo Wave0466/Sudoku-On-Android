@@ -27,11 +27,8 @@ class GameActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_game)
 
-        // ================== START: 关键修复 ==================
-        // 不再寻找和设置自定义 Toolbar，而是直接操作 supportActionBar
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = "数独游戏"
-        // ==================  END: 关键修复  ==================
 
         // 初始化视图
         sudokuBoardView = findViewById(R.id.sudokuBoardView)
@@ -43,6 +40,9 @@ class GameActivity : AppCompatActivity() {
 
         val difficulty = intent.getIntExtra("DIFFICULTY", 1)
         viewModel.startGame(difficulty)
+
+        chronometer.base = SystemClock.elapsedRealtime()
+        chronometer.start()
     }
 
     // 重写这个方法来处理系统 ActionBar 上的返回箭头点击
@@ -67,8 +67,6 @@ class GameActivity : AppCompatActivity() {
         viewModel.sudokuBoard.observe(this) { board ->
             if (board != null) {
                 sudokuBoardView.setBoard(board)
-                chronometer.base = SystemClock.elapsedRealtime()
-                chronometer.start()
             }
         }
         viewModel.selectedCell.observe(this) { cell ->
