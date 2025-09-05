@@ -8,9 +8,9 @@ class Generator {
 
     suspend fun generate(difficulty: Int): Array<IntArray> = withContext(Dispatchers.Default) {
         val holesToDig = when (difficulty) {
-            1 -> 40 // Easy
-            2 -> 50 // Medium
-            else -> 55 // Hard
+            1 -> 30 // Easy
+            2 -> 40 // Medium
+            else -> 50 // Hard
         }
 
         val fullBoard = generateFullSolution()

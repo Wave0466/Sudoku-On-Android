@@ -14,15 +14,12 @@ class GameViewModel : ViewModel() {
     val isLoading = MutableLiveData<Boolean>(false)
 
     private var initialBoard: Array<IntArray> = emptyArray()
-    private var solution: Array<IntArray> = emptyArray() // 存储完整解
 
     fun startGame(difficulty: Int) {
-        isLoading.postValue(true) // 开始加载
-        viewModelScope.launch { // 在 ViewModel 的协程作用域中启动一个新协程
-            // generator.generate 现在是一个 suspend 函数，只能在协程中调用
-            // 它会自动在后台线程执行
+        isLoading.postValue(true)
+        viewModelScope.launch {
             val generatedBoard = Generator().generate(difficulty)
-            initialBoard = generatedBoard // 保存初始题目
+            initialBoard = generatedBoard
 
             val board = Array(9) { row ->
                 Array(9) { col ->
@@ -30,66 +27,93 @@ class GameViewModel : ViewModel() {
                     SudokuCell(row, col, value, value != 0)
                 }
             }
-            sudokuBoard.postValue(board) // 在后台线程用 postValue 更新 LiveData
+            sudokuBoard.postValue(board)
             selectedCell.postValue(null)
             isGameWon.postValue(false)
-            isLoading.postValue(false) // 加载完成
+            isLoading.postValue(false)
         }
     }
 
     fun selectCell(row: Int, col: Int) {
-        selectedCell.postValue(Pair(row, col))
+        selectedCell.value = Pair(row, col)
+        updateCellStates()
     }
 
     fun setNumber(number: Int) {
-        val selCell = selectedCell.value ?: return
+        val selCellPos = selectedCell.value ?: return
         val currentBoard = sudokuBoard.value ?: return
 
-        val cell = currentBoard[selCell.first][selCell.second]
+        val cell = currentBoard[selCellPos.first][selCellPos.second]
         if (!cell.isStartingCell) {
             cell.value = number
-            sudokuBoard.postValue(currentBoard) // 通知 UI 更新
-            checkWinCondition()
+            updateCellStates()
         }
     }
 
-    // 提示功能
-    fun getHint() {
-        // (提示功能实现见后续 Solver 部分)
-        // 简单思路：找到当前选中格子的正确答案并填入
-    }
-
-    private fun checkWinCondition() {
+    private fun updateCellStates() {
         val board = sudokuBoard.value ?: return
-        for (i in 0..8) {
-            for (j in 0..8) {
-                if (board[i][j].value == 0) return // 还有空格
-                if (!isMoveValid(i, j, board[i][j].value)) {
-                    return // 有冲突
+        val selected = selectedCell.value
+
+        // 优化点 1: 在一次循环中完成所有状态重置和高亮计算
+        val selectedValue = if (selected != null) board[selected.first][selected.second].value else 0
+
+        for (r in 0..8) {
+            for (c in 0..8) {
+                val cell = board[r][c]
+                // 重置状态
+                cell.isHighlighted = false
+                cell.isConflicting = false
+                // 计算高亮
+                if (selectedValue != 0 && cell.value == selectedValue) {
+                    cell.isHighlighted = true
                 }
             }
         }
-        isGameWon.postValue(true)
+
+        // 优化点 2: 冲突计算通过直接创建 Array 避免了不必要的 List 转换
+        for (r in 0..8) {
+            findConflicts(board[r])
+        }
+        for (c in 0..8) {
+            val column = Array(9) { r -> board[r][c] }
+            findConflicts(column)
+        }
+        for (br in 0..2) for (bc in 0..2) {
+            val box = Array(9) { i ->
+                val r = br * 3 + i / 3
+                val c = bc * 3 + i % 3
+                board[r][c]
+            }
+            findConflicts(box)
+        }
+
+        checkWinCondition(board)
+        sudokuBoard.value = board
     }
 
-    private fun isMoveValid(row: Int, col: Int, num: Int): Boolean {
-        val board = sudokuBoard.value ?: return false
-        // 检查行
-        for (c in 0..8) {
-            if (c != col && board[row][c].value == num) return false
-        }
-        // 检查列
-        for (r in 0..8) {
-            if (r != row && board[r][col].value == num) return false
-        }
-        // 检查 3x3
-        val startRow = row / 3 * 3
-        val startCol = col / 3 * 3
-        for (r in startRow until startRow + 3) {
-            for (c in startCol until startCol + 3) {
-                if ((r != row || c != col) && board[r][c].value == num) return false
+    // 优化点 3: findConflicts 的参数类型改为 Array<SudokuCell> 避免在调用时创建临时列表
+    private fun findConflicts(cells: Array<SudokuCell>) {
+        val seen = mutableMapOf<Int, MutableList<SudokuCell>>()
+        cells.forEach { cell ->
+            if (cell.value != 0) {
+                seen.getOrPut(cell.value) { mutableListOf() }.add(cell)
             }
         }
-        return true
+        seen.values.filter { it.size > 1 }.flatten().forEach { it.isConflicting = true }
+    }
+
+
+    private fun checkWinCondition(board: Array<Array<SudokuCell>>) {
+        var isFull = true
+        var hasConflict = false
+        for (row in board) {
+            for (cell in row) {
+                if (cell.value == 0) isFull = false
+                if (cell.isConflicting) hasConflict = true
+            }
+        }
+        if (isFull && !hasConflict) {
+            isGameWon.value = true
+        }
     }
 }

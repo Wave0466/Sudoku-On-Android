@@ -27,6 +27,13 @@ class GameActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_game)
 
+        // ================== START: 关键修复 ==================
+        // 不再寻找和设置自定义 Toolbar，而是直接操作 supportActionBar
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.title = "数独游戏"
+        // ==================  END: 关键修复  ==================
+
+        // 初始化视图
         sudokuBoardView = findViewById(R.id.sudokuBoardView)
         chronometer = findViewById(R.id.chronometer)
         loadingProgressBar = findViewById(R.id.loadingProgressBar)
@@ -36,13 +43,29 @@ class GameActivity : AppCompatActivity() {
 
         val difficulty = intent.getIntExtra("DIFFICULTY", 1)
         viewModel.startGame(difficulty)
-        chronometer.base = SystemClock.elapsedRealtime()
-        chronometer.start()
+    }
+
+    // 重写这个方法来处理系统 ActionBar 上的返回箭头点击
+    override fun onSupportNavigateUp(): Boolean {
+        showExitConfirmationDialog()
+        return true
+    }
+
+    // ... 其余所有方法 (showExitConfirmationDialog, setupObservers, etc.) 保持不变 ...
+    private fun showExitConfirmationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("返回主菜单")
+            .setMessage("确定要退出当前游戏吗？您的进度将不会被保存。")
+            .setPositiveButton("确定") { _, _ ->
+                finish()
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     private fun setupObservers() {
         viewModel.sudokuBoard.observe(this) { board ->
-            if (board != null) { // 确保有数据时才启动计时器
+            if (board != null) {
                 sudokuBoardView.setBoard(board)
                 chronometer.base = SystemClock.elapsedRealtime()
                 chronometer.start()
@@ -91,8 +114,14 @@ class GameActivity : AppCompatActivity() {
             .setView(editText)
             .setPositiveButton("保存") { _, _ ->
                 val name = editText.text.toString().ifEmpty { "Anonymous" }
-                LeaderboardManager.saveScore(this, Score(name, timeInMillis))
-                finish() // 返回主菜单
+                val difficulty = intent.getIntExtra("DIFFICULTY", 1)
+                val newScore = Score(
+                    playerName = name,
+                    timeInMillis = timeInMillis,
+                    difficulty = difficulty
+                )
+                LeaderboardManager.saveScore(this, newScore)
+                finish()
             }
             .setNegativeButton("取消") { _, _ -> finish() }
             .setCancelable(false)
