@@ -5,21 +5,23 @@ import android.os.Bundle
 import android.widget.Button
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.example.sudoku.R // <--- 检查这行是否和你的项目包名匹配
+import com.example.sudoku.R
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // 关键！确保这里加载的是 activity_main
         setContentView(R.layout.activity_main)
 
-        // 找到布局文件中的按钮
         findViewById<Button>(R.id.btnNewGame).setOnClickListener {
             showDifficultyDialog()
         }
+
         findViewById<Button>(R.id.btnLeaderboard).setOnClickListener {
             startActivity(Intent(this, LeaderboardSelectionActivity::class.java))
+        }
+
+        findViewById<Button>(R.id.btnMultiplayer).setOnClickListener {
+            startActivity(Intent(this, MultiplayerLobbyActivity::class.java))
         }
     }
 
