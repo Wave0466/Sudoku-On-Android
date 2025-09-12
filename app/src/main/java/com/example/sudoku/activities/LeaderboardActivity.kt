@@ -27,18 +27,14 @@ class LeaderboardActivity : AppCompatActivity() {
 
         val scores = LeaderboardManager.getScores(this, difficulty)
 
-        // ================== START: 关键逻辑 ==================
         if (scores.isEmpty()) {
-            // 如果没有分数，隐藏列表，显示提示文字
             recyclerView.visibility = View.GONE
             emptyTextView.visibility = View.VISIBLE
         } else {
-            // 如果有分数，显示列表，隐藏提示文字
             recyclerView.visibility = View.VISIBLE
             emptyTextView.visibility = View.GONE
             recyclerView.adapter = LeaderboardAdapter(scores)
         }
-        // ==================  END: 关键逻辑  ==================
     }
 
     override fun onSupportNavigateUp(): Boolean {

@@ -15,39 +15,29 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Sudoku"
-        tools:targetApi="31">
-        <activity
-            android:name=".activities.MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+    android:networkSecurityConfig="@xml/network_security_config"
 
-        <activity
-            android:name=".activities.GameActivity"
-            android:label="数独游戏" />
+    tools:targetApi="31">
 
-        <activity
-            android:name=".activities.LeaderboardActivity"
-            android:label="排行榜"
-            android:parentActivityName=".activities.MainActivity" />
+    <activity
+        android:name=".activities.MainActivity"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
 
-        <activity
-            android:name=".activities.LeaderboardSelectionActivity"
-            android:label="选择榜单"
-            android:parentActivityName=".activities.MainActivity" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+    </activity>
 
-        <activity
-            android:name=".activities.MultiplayerLobbyActivity"
-            android:label="联机大厅"
-            android:parentActivityName=".activities.MainActivity" />
+    <activity
+        android:name=".activities.GameActivity"
+        android:label="数独游戏" />
 
-        <activity
-            android:name=".activities.MultiplayerGameActivity"
-            android:label="联机对战" />
-    </application>
+    <activity
+        android:name=".activities.LeaderboardActivity"
+        android:label="排行榜"
+        android:parentActivityName=".activities.MainActivity" />
+</application>
 
-</manifest>
+    </manifest>

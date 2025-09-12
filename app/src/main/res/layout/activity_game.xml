@@ -6,7 +6,6 @@
     android:layout_height="match_parent"
     tools:context=".activities.GameActivity">
 
-    <!-- 计时器，约束在屏幕顶部 -->
     <Chronometer
         android:id="@+id/chronometer"
         android:layout_width="wrap_content"
@@ -17,17 +16,17 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- 数字按钮，约束在屏幕底部 -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/numberButtonsLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/sudokuBoardView"
+        app:layout_constraintVertical_bias="0.5">
 
         <!-- 第一行按钮 -->
         <Button
@@ -117,7 +116,6 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- 数独棋盘，被“夹在”计时器和数字按钮之间，实现了响应式 -->
     <com.example.sudoku.ui.theme.SudokuBoardView
         android:id="@+id/sudokuBoardView"
         android:layout_width="0dp"
@@ -132,7 +130,6 @@
         app:layout_constraintTop_toBottomOf="@id/chronometer"
         app:layout_constraintBottom_toTopOf="@id/numberButtonsLayout" />
 
-    <!-- 加载进度条 -->
     <ProgressBar
         android:id="@+id/loadingProgressBar"
         android:layout_width="wrap_content"

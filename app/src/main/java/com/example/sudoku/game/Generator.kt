@@ -6,11 +6,12 @@ import kotlinx.coroutines.withContext
 class Generator {
     private val solver = Solver()
 
+    // 这个方法现在只负责本地生成
     suspend fun generate(difficulty: Int): Array<IntArray> = withContext(Dispatchers.Default) {
         val holesToDig = when (difficulty) {
-            1 -> 30 // Easy
-            2 -> 40 // Medium
-            else -> 50 // Hard
+            1 -> 35 // 简单
+            2 -> 45 // 中等
+            else -> 50 // 困难
         }
 
         val fullBoard = generateFullSolution()
@@ -23,7 +24,6 @@ class Generator {
         return board
     }
 
-    // A randomized backtracking to create a full solution
     private fun fill(board: Array<IntArray>): Boolean {
         val emptyCell = findEmpty(board) ?: return true
         val (row, col) = emptyCell
@@ -56,7 +56,7 @@ class Generator {
 
             puzzle[row][col] = 0
             if (solver.countSolutions(puzzle) != 1) {
-                puzzle[row][col] = temp // Restore if not unique
+                puzzle[row][col] = temp
             } else {
                 holesDug++
             }
@@ -64,7 +64,6 @@ class Generator {
         return puzzle
     }
 
-    // Helper for generating full solution
     private fun findEmpty(board: Array<IntArray>): Pair<Int, Int>? {
         for (r in 0..8) for (c in 0..8) if (board[r][c] == 0) return r to c
         return null

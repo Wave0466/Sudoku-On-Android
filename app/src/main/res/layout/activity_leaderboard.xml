@@ -1,18 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 使用 FrameLayout 作为根布局，方便叠放视图 -->
+
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingTop="?attr/actionBarSize"> <!-- 关键: 为 ActionBar 留出空间 -->
+    android:paddingTop="?attr/actionBarSize">
 
-    <!-- 排行榜列表，默认隐藏 -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/leaderboardRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone" />
 
-    <!-- “暂无记录”提示文字，默认显示 -->
     <TextView
         android:id="@+id/emptyTextView"
         android:layout_width="wrap_content"

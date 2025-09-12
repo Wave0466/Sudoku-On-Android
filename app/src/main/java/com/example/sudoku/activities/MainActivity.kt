@@ -16,13 +16,25 @@ class MainActivity : AppCompatActivity() {
             showDifficultyDialog()
         }
 
-        findViewById<Button>(R.id.btnLeaderboard).setOnClickListener {
-            startActivity(Intent(this, LeaderboardSelectionActivity::class.java))
+        // 为新按钮添加监听器
+        findViewById<Button>(R.id.btnApiGame).setOnClickListener {
+            showApiDifficultyDialog()
         }
 
-        findViewById<Button>(R.id.btnMultiplayer).setOnClickListener {
-            startActivity(Intent(this, MultiplayerLobbyActivity::class.java))
+        findViewById<Button>(R.id.btnLeaderboard).setOnClickListener {
+            showLeaderboardDialog()
         }
+    }
+
+    private fun showApiDifficultyDialog() {
+        // 根据 API 文档，定义所有支持的难度
+        val apiDifficulties = arrayOf("简单 (easy)", "普通 (normal)", "困难 (hard)", "非常困难 (very hard)")
+        AlertDialog.Builder(this)
+            .setTitle("选择网络难度")
+            .setItems(apiDifficulties) { _, which ->
+                startApiGame(which + 1)
+            }
+            .show()
     }
 
     private fun showDifficultyDialog() {
@@ -30,15 +42,42 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle("选择难度")
             .setItems(difficulties) { _, which ->
-                // which is 0 for Easy, 1 for Medium, 2 for Hard
                 startGame(which + 1)
             }
             .show()
     }
 
     private fun startGame(difficulty: Int) {
-        val intent = Intent(this, GameActivity::class.java)
-        intent.putExtra("DIFFICULTY", difficulty)
+        val intent = Intent(this, GameActivity::class.java).apply {
+            putExtra("GAME_MODE", "LOCAL")
+            putExtra("DIFFICULTY", difficulty)
+        }
+        startActivity(intent)
+    }
+
+    private fun startApiGame(difficulty: Int) {
+        val intent = Intent(this, GameActivity::class.java).apply {
+            putExtra("GAME_MODE", "API")
+            putExtra("DIFFICULTY", difficulty) // 传递用户选择的难度
+        }
+        startActivity(intent)
+    }
+
+    private fun showLeaderboardDialog() {
+        val leaderboardOptions = arrayOf("简单榜", "中等榜", "困难榜")
+        AlertDialog.Builder(this)
+            .setTitle("选择排行榜")
+            .setItems(leaderboardOptions) { _, which ->
+                showLeaderboard(which + 1, leaderboardOptions[which])
+            }
+            .show()
+    }
+
+    private fun showLeaderboard(difficulty: Int, title: String) {
+        val intent = Intent(this, LeaderboardActivity::class.java).apply {
+            putExtra("DIFFICULTY", difficulty)
+            putExtra("TITLE", title)
+        }
         startActivity(intent)
     }
 }
