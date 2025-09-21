@@ -1,4 +1,4 @@
-package com.example.sudoku.game
+package com.example.server
 
 class Solver {
     private var board: Array<IntArray> = Array(9) { IntArray(9) }

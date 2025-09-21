@@ -31,32 +31,17 @@ class SudokuBoardView(context: Context, attrs: AttributeSet?) : View(context, at
         color = ContextCompat.getColor(context, R.color.black)
         strokeWidth = 2f
     }
-    private val selectedCellPaint = Paint().apply {
-        style = Paint.Style.FILL
-        color = ContextCompat.getColor(context, R.color.sudoku_cell_selected_bg)
-    }
-    private val highlightedCellPaint = Paint().apply {
-        style = Paint.Style.FILL
-        color = ContextCompat.getColor(context, R.color.sudoku_cell_highlighted_bg)
-    }
-    private val startingNumberPaint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.black)
-        textAlign = Paint.Align.CENTER
-    }
-    private val userNumberPaint = Paint().apply {
-        // 我们可以为用户数字也指定一个颜色，如果需要的话
-        color = ContextCompat.getColor(context, R.color.black)
-        textAlign = Paint.Align.CENTER
-    }
-    private val conflictNumberPaint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.sudoku_number_conflict)
-        textAlign = Paint.Align.CENTER
-    }
 
-    private val boxBackgroundPaint = Paint().apply {
-        style = Paint.Style.FILL
-        color = ContextCompat.getColor(context, R.color.sudoku_box_background)
-    }
+    private val boxBackgroundPaint = Paint().apply { style = Paint.Style.FILL; color = ContextCompat.getColor(context, R.color.sudoku_box_background) }
+    private val selectedCellPaint = Paint().apply { style = Paint.Style.FILL; color = ContextCompat.getColor(context, R.color.sudoku_cell_selected_bg) }
+    private val relatedCellPaint = Paint().apply { style = Paint.Style.FILL; color = ContextCompat.getColor(context, R.color.sudoku_cell_related_bg) }
+    private val highlightedCellPaint = Paint().apply { style = Paint.Style.FILL; color = ContextCompat.getColor(context, R.color.sudoku_cell_highlighted_bg) }
+    private val conflictBackgroundPaint = Paint().apply { style = Paint.Style.FILL; color = ContextCompat.getColor(context, R.color.sudoku_conflict_bg) }
+
+    private val startingNumberPaint = Paint().apply { color = ContextCompat.getColor(context, R.color.black); textAlign = Paint.Align.CENTER }
+    private val userNumberPaint = Paint().apply { color = ContextCompat.getColor(context, R.color.sudoku_user_text); textAlign = Paint.Align.CENTER }
+    private val conflictUserNumberPaint = Paint().apply { color = ContextCompat.getColor(context, R.color.sudoku_conflict_user_text); textAlign = Paint.Align.CENTER }
+
 
     fun setBoard(board: Array<Array<SudokuCell>>) {
         this.board = board
@@ -85,31 +70,25 @@ class SudokuBoardView(context: Context, attrs: AttributeSet?) : View(context, at
         val numberTextSize = cellSize / 1.5f
         startingNumberPaint.textSize = numberTextSize
         userNumberPaint.textSize = numberTextSize
-        conflictNumberPaint.textSize = numberTextSize
+        conflictUserNumberPaint.textSize = numberTextSize
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         drawBoxBackgrounds(canvas)
+
         board?.let {
-            drawCellBackgrounds(canvas, it) // 绘制背景
-            drawGrid(canvas)                // 绘制网格线
-            drawNumbers(canvas, it)         // 绘制数字
+            drawCellBackgrounds(canvas, it)
+            drawGrid(canvas)
+            drawNumbers(canvas, it)
         }
     }
 
     private fun drawBoxBackgrounds(canvas: Canvas) {
         for (r in 0..8) {
             for (c in 0..8) {
-                // 这个条件会让 (0,0), (0,2), (1,1), (2,0), (2,2) 的九宫格被填充
                 if ((r / 3 + c / 3) % 2 == 0) {
-                    canvas.drawRect(
-                        c * cellSize,
-                        r * cellSize,
-                        (c + 1) * cellSize,
-                        (r + 1) * cellSize,
-                        boxBackgroundPaint
-                    )
+                    canvas.drawRect(c * cellSize, r * cellSize, (c + 1) * cellSize, (r + 1) * cellSize, boxBackgroundPaint)
                 }
             }
         }
@@ -120,17 +99,22 @@ class SudokuBoardView(context: Context, attrs: AttributeSet?) : View(context, at
             for (c in 0..8) {
                 val cell = board[r][c]
 
-                // 核心逻辑: 根据单元格状态选择背景画笔
-                val paint = when {
-                    // 优先显示黄色高亮
-                    cell.isHighlighted -> highlightedCellPaint
-                    // 其次显示蓝色选中框 (如果不是高亮格的话)
-                    r == selectedRow && c == selectedCol -> selectedCellPaint
-                    else -> null
+                val isRelated = (selectedRow != -1 && (r == selectedRow || c == selectedCol || (r/3 == selectedRow/3 && c/3 == selectedCol/3)))
+
+                if (isRelated) {
+                    canvas.drawRect(c * cellSize, r * cellSize, (c + 1) * cellSize, (r + 1) * cellSize, relatedCellPaint)
                 }
 
-                paint?.let {
-                    canvas.drawRect(c * cellSize, r * cellSize, (c + 1) * cellSize, (r + 1) * cellSize, it)
+                if (cell.isHighlighted) {
+                    canvas.drawRect(c * cellSize, r * cellSize, (c + 1) * cellSize, (r + 1) * cellSize, highlightedCellPaint)
+                }
+
+                if (cell.isConflicting) {
+                    canvas.drawRect(c * cellSize, r * cellSize, (c + 1) * cellSize, (r + 1) * cellSize, conflictBackgroundPaint)
+                }
+
+                if (r == selectedRow && c == selectedCol) {
+                    canvas.drawRect(c * cellSize, r * cellSize, (c + 1) * cellSize, (r + 1) * cellSize, selectedCellPaint)
                 }
             }
         }
@@ -153,22 +137,15 @@ class SudokuBoardView(context: Context, attrs: AttributeSet?) : View(context, at
 
                 val text = cell.value.toString()
 
-                // 核心逻辑: 根据单元格状态选择字体画笔
                 val paint = when {
-                    cell.isConflicting -> conflictNumberPaint // 优先显示红色冲突
+                    cell.isConflicting && !cell.isStartingCell -> conflictUserNumberPaint
                     cell.isStartingCell -> startingNumberPaint
                     else -> userNumberPaint
                 }
 
                 paint.getTextBounds(text, 0, text.length, textBounds)
                 val textHeight = textBounds.height()
-
-                canvas.drawText(
-                    text,
-                    (c * cellSize) + cellSize / 2,
-                    (r * cellSize) + cellSize / 2 + textHeight / 2,
-                    paint
-                )
+                canvas.drawText(text, (c * cellSize) + cellSize / 2, (r * cellSize) + cellSize / 2 + textHeight / 2, paint)
             }
         }
     }

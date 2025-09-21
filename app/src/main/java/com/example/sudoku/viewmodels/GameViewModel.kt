@@ -15,8 +15,8 @@ class GameViewModel : ViewModel() {
 
     val sudokuBoard = MutableLiveData<Array<Array<SudokuCell>>>()
     val selectedCell = MutableLiveData<Pair<Int, Int>?>()
-    val isGameWon = MutableLiveData<Boolean>(false)
-    val isLoading = MutableLiveData<Boolean>(false)
+    val isGameWon = MutableLiveData(false)
+    val isLoading = MutableLiveData(false)
 
     private var initialBoard: Array<IntArray> = emptyArray()
     private val generator = Generator()
@@ -45,6 +45,27 @@ class GameViewModel : ViewModel() {
         }
     }
 
+    fun startGameWithOnlinePuzzle(puzzleString: String) {
+        isLoading.value = true
+        viewModelScope.launch(Dispatchers.Default) {
+            // 将 81 个字符的字符串转换为 9x9 的 IntArray
+            val board = puzzleString
+                .chunked(9) // 每9个字符切成一-组
+                .map { rowString ->
+                    rowString.map { char ->
+                        // 将每个字符转换为数字
+                        char.digitToInt()
+                    }.toIntArray() // 将一组字符转换为 IntArray
+                }.toTypedArray() // 将所有组转换为 Array<IntArray>
+
+            // 切换到主线程来初始化棋盘和更新UI
+            withContext(Dispatchers.Main) {
+                initializeBoardFrom2DArray(board)
+                isLoading.value = false
+            }
+        }
+    }
+
     private suspend fun fetchBoardFromApi(difficulty: Int): Array<IntArray> {
         val apiKey = "1133790bb60f6a1689da684096082830"
         val difficultyStr = when (difficulty) {
@@ -52,7 +73,7 @@ class GameViewModel : ViewModel() {
             2 -> "normal"
             3 -> "hard"
             4 -> "veryhard"
-            else -> "easy" // 提供一个默认值以防万一
+            else -> "easy" // 提供一个默认值
         }
 
         return try {
@@ -71,27 +92,17 @@ class GameViewModel : ViewModel() {
         }
     }
 
-    fun initializeBoard(boardData: IntArray) {
-        val board2D = Array(9) { r ->
-            IntArray(9) { c ->
-                boardData[r * 9 + c]
-            }
-        }
-        initializeBoardFrom2DArray(board2D)
-    }
-
     private fun initializeBoardFrom2DArray(boardData: Array<IntArray>) {
         initialBoard = boardData.map { it.clone() }.toTypedArray()
         val newBoard = Array(9) { row ->
             Array(9) { col ->
-                val value = initialBoard[row][col]
-                SudokuCell(row, col, value, value != 0)
+                SudokuCell(row, col, initialBoard[row][col], initialBoard[row][col] != 0)
             }
         }
         sudokuBoard.value = newBoard
         selectedCell.value = null
         isGameWon.value = false
-        updateCellStates()
+        updateCellStates() // 查看格子是否有冲突，以及相同数字高亮，因为这里刚生成并且玩家没有选择格子，所以这里其实用不到
     }
 
     fun selectCell(row: Int, col: Int) {
@@ -158,6 +169,6 @@ class GameViewModel : ViewModel() {
 
     private fun createEmptyBoard(reason: String): Array<IntArray> {
         Log.d("GameViewModel_Debug", "创建了一个空棋盘，原因: $reason")
-        return Array(9) { IntArray(9) { 0 } }
+        return Array(9) { IntArray(9) }
     }
 }

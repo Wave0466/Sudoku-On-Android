@@ -11,11 +11,14 @@ import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.sudoku.R
 import com.example.sudoku.ui.theme.SudokuBoardView
 import com.example.sudoku.utils.LeaderboardManager
+import com.example.sudoku.utils.NetworkManager
 import com.example.sudoku.utils.Score
 import com.example.sudoku.viewmodels.GameViewModel
+import kotlinx.coroutines.launch
 
 class GameActivity : AppCompatActivity() {
 
@@ -24,38 +27,141 @@ class GameActivity : AppCompatActivity() {
     private lateinit var chronometer: Chronometer
     private lateinit var loadingProgressBar: ProgressBar
 
-    // 新增一个成员变量，用于安全地保存游戏结束时的时间
+    private var gameMode: String = "LOCAL"
     private var timeWhenStopped: Long = 0
     private var isTimerStarted = false
+
+    private var isResultSent = false      // 标记 “我是否已发送了完成请求”
+    private var isGameFinished = false    // 标记 “服务器是否已发来最终结果”
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_game)
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "数独游戏" // 默认标题
 
         sudokuBoardView = findViewById(R.id.sudokuBoardView)
         chronometer = findViewById(R.id.chronometer)
         loadingProgressBar = findViewById(R.id.loadingProgressBar)
 
-        val gameMode = intent.getStringExtra("GAME_MODE") ?: "LOCAL"
+        gameMode = intent.getStringExtra("GAME_MODE") ?: "LOCAL"
         val difficulty = intent.getIntExtra("DIFFICULTY", 1)
+        val puzzleString = intent.getStringExtra("PUZZLE_STRING")
 
-        if (gameMode == "API") {
-            supportActionBar?.title = "网络数独"
+        when (gameMode) {
+            "ONLINE" -> {
+                supportActionBar?.title = "在线对战"
+                observeServerMessages()
+                if (puzzleString != null) {
+                    viewModel.startGameWithOnlinePuzzle(puzzleString)
+                }
+            }
+            "API" -> {
+                supportActionBar?.title = "网络数独"
+                viewModel.startGame(gameMode, difficulty)
+            }
+            else -> { // LOCAL
+                supportActionBar?.title = "数独游戏"
+                viewModel.startGame(gameMode, difficulty)
+            }
         }
-
-        viewModel.startGame(gameMode, difficulty)
 
         setupObservers()
         setupListeners()
 
-        onBackPressedDispatcher.addCallback(this) {
-            showExitConfirmationDialog()
-        }
+        onBackPressedDispatcher.addCallback(this) { showExitConfirmationDialog() }
+    }
 
-        isTimerStarted = false
+    private fun observeServerMessages() {
+        lifecycleScope.launch {
+            NetworkManager.messageFlow.collect { message ->
+                handleServerMessage(message)
+            }
+        }
+    }
+
+    private fun handleServerMessage(message: String) {
+        runOnUiThread {
+            if (isGameFinished || isFinishing) return@runOnUiThread
+
+            val parts = message.split(":", limit = 3)
+            val command = parts[0]
+
+            when (command) {
+                "S_GAME_OVER" -> {
+                    isGameFinished = true // 标记游戏彻底结束
+                    chronometer.stop()
+
+                    val result = parts.getOrNull(1)
+                    val time = parts.getOrNull(2)
+
+                    val title = if (result == "WIN") "恭喜，你赢了！" else "很遗憾，你输了..."
+                    val finalMessage = "胜利者用时: $time 秒"
+
+                    AlertDialog.Builder(this)
+                        .setTitle(title)
+                        .setMessage(finalMessage)
+                        .setPositiveButton("返回主菜单") { _, _ -> finish() }
+                        .setCancelable(false)
+                        .show()
+                }
+                "S_OPPONENT_LEFT" -> {
+                    isGameFinished = true // 标记游戏彻底结束
+                    chronometer.stop()
+
+                    AlertDialog.Builder(this)
+                        .setTitle("对手已断开连接")
+                        .setMessage("游戏已结束。")
+                        .setPositiveButton("返回主菜单") { _, _ -> finish() }
+                        .setCancelable(false)
+                        .show()
+                }
+            }
+        }
+    }
+
+    private fun showWinDialog() {
+        val timeInSeconds = timeWhenStopped / 1000
+
+        when (gameMode) {
+            "ONLINE" -> {
+                // 使用 isResultSent 标志位来防止重复发送
+                if (isResultSent) return
+                isResultSent = true // 立刻标记为已发送，确保只发送一次
+
+                // 在线模式下，只发送消息，不显示任何本地弹窗
+                NetworkManager.sendMessage("C_FINISH_GAME:$timeInSeconds")
+            }
+            "LOCAL" -> {
+                if (isGameFinished) return
+                isGameFinished = true
+                val editText = EditText(this)
+                editText.hint = "输入你的名字"
+                AlertDialog.Builder(this)
+                    .setTitle("恭喜！你赢了！")
+                    .setMessage("用时: $timeInSeconds 秒")
+                    .setView(editText)
+                    .setPositiveButton("保存") { _, _ ->
+                        val name = editText.text.toString().ifEmpty { "Anonymous" }
+                        val difficulty = intent.getIntExtra("DIFFICULTY", 1)
+                        LeaderboardManager.saveScore(this, Score(name, timeWhenStopped, difficulty))
+                        finish()
+                    }
+                    .setNegativeButton("取消") { _, _ -> finish() }
+                    .setCancelable(false)
+                    .show()
+            }
+            else -> { // API Mode
+                if (isGameFinished) return
+                isGameFinished = true
+                AlertDialog.Builder(this)
+                    .setTitle("恭喜！你赢了！")
+                    .setMessage("用时: $timeInSeconds 秒")
+                    .setPositiveButton("返回主菜单") { _, _ -> finish() }
+                    .setCancelable(false)
+                    .show()
+            }
+        }
     }
 
     private fun setupObservers() {
@@ -74,12 +180,8 @@ class GameActivity : AppCompatActivity() {
         }
         viewModel.isGameWon.observe(this) { isWon ->
             if (isWon && !isFinishing) {
-                // 停止计时器
                 chronometer.stop()
-                // 立刻将停止时的时间差保存在我们自己的变量里
                 timeWhenStopped = SystemClock.elapsedRealtime() - chronometer.base
-
-                // 调用 showWinDialog，不再传递任何参数
                 showWinDialog()
             }
         }
@@ -115,42 +217,16 @@ class GameActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle("返回主菜单")
             .setMessage("确定要退出当前游戏吗？您的进度将不会被保存。")
-            .setPositiveButton("确定") { _, _ -> finish() }
+            .setPositiveButton("确定") { _, _ ->
+                // 在退出前，检查是否为在线对战模式
+                if (gameMode == "ONLINE") {
+                    // 如果是，主动向服务器发送离开游戏的指令
+                    NetworkManager.sendMessage("C_LEAVE_GAME")
+                }
+                // 然后再关闭 Activity
+                finish()
+            }
             .setNegativeButton("取消", null)
             .show()
-    }
-
-    // showWinDialog 的方法签名已修改，不再接收参数
-    private fun showWinDialog() {
-        val gameMode = intent.getStringExtra("GAME_MODE") ?: "LOCAL"
-
-        // 只有本地游戏才显示保存分数的对话框
-        if (gameMode == "LOCAL") {
-            val editText = EditText(this)
-            editText.hint = "输入你的名字"
-            AlertDialog.Builder(this)
-                .setTitle("恭喜！你赢了！")
-                // 使用我们自己保存的 timeWhenStopped 变量
-                .setMessage("用时: ${timeWhenStopped / 1000} 秒")
-                .setView(editText)
-                .setPositiveButton("保存") { _, _ ->
-                    val name = editText.text.toString().ifEmpty { "Anonymous" }
-                    val difficulty = intent.getIntExtra("DIFFICULTY", 1)
-                    // 在创建 Score 对象时，也使用我们自己的变量
-                    LeaderboardManager.saveScore(this, Score(name, timeWhenStopped, difficulty))
-                    finish()
-                }
-                .setNegativeButton("取消") { _, _ -> finish() }
-                .setCancelable(false)
-                .show()
-        } else {
-            // 网络游戏只显示一个简单的祝贺，然后返回
-            AlertDialog.Builder(this)
-                .setTitle("恭喜！你赢了！")
-                .setMessage("用时: ${timeWhenStopped / 1000} 秒")
-                .setPositiveButton("返回主菜单") { _, _ -> finish() }
-                .setCancelable(false)
-                .show()
-        }
     }
 }

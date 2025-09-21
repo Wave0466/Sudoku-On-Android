@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 您项目原有的颜色 -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -9,8 +8,19 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <color name="sudoku_cell_selected_bg">#66b2eb</color>      <!-- 选中单元格的背景色 (淡蓝色) -->
-    <color name="sudoku_cell_highlighted_bg">#FFEB3B</color>    <!-- 相同数字高亮的背景色 (黄色) -->
-    <color name="sudoku_number_conflict">#D32F2F</color>          <!-- 冲突数字的颜色 (红色) -->
+    <!-- 九宫格交错背景色 -->
     <color name="sudoku_box_background">#E8E8E8</color>
+
+    <!-- 选中与关联格子背景色 -->
+    <color name="sudoku_cell_selected_bg">#BBDEFB</color>   <!-- 选中格子 (较深的蓝色) -->
+    <color name="sudoku_cell_related_bg">#E3F2FD</color>    <!-- 关联格子 (淡蓝色) -->
+
+    <!-- 状态背景色 -->
+    <color name="sudoku_cell_highlighted_bg">#FFEB3B</color> <!-- 相同数字高亮 (黄色) -->
+    <color name="sudoku_conflict_bg">#FFCDD2</color>      <!-- 冲突背景 (柔和的红色) -->
+
+    <!-- 字体颜色 -->
+    <color name="sudoku_user_text">#1A237E</color>          <!-- 用户输入的字体 (深蓝色) -->
+    <color name="sudoku_conflict_user_text">#B71C1C</color> <!-- 用户输入的冲突字体 (深红色) -->
+
 </resources>

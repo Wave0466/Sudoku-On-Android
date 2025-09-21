@@ -1,4 +1,4 @@
-package com.example.sudoku.game
+package com.example.server
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -6,9 +6,10 @@ import kotlinx.coroutines.withContext
 class Generator {
     private val solver = Solver()
 
+    // 这个方法现在只负责本地生成
     suspend fun generate(difficulty: Int): Array<IntArray> = withContext(Dispatchers.Default) {
         val holesToDig = when (difficulty) {
-            1 -> 30 // 简单
+            1 -> 1 // 简单
             2 -> 40 // 中等
             else -> 50 // 困难
         }
